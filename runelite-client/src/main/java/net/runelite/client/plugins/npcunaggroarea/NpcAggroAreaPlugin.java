@@ -60,6 +60,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
 import net.runelite.client.ui.overlay.infobox.InfoBoxManager;
 import net.runelite.client.util.WildcardMatcher;
+import net.runelite.client.Notifier;
 
 @PluginDescriptor(
 	name = "NPC Aggression Timer",
@@ -110,6 +111,9 @@ public class NpcAggroAreaPlugin extends Plugin
 	@Inject
 	private ConfigManager configManager;
 
+	@Inject
+	private Notifier notifier;
+
 	@Getter
 	private final WorldPoint[] safeCenters = new WorldPoint[2];
 
@@ -125,6 +129,9 @@ public class NpcAggroAreaPlugin extends Plugin
 	private WorldPoint lastPlayerLocation;
 	private WorldPoint previousUnknownCenter;
 	private boolean loggingIn;
+
+	private boolean notifyOnce = false;
+
 	private List<String> npcNamePatterns;
 
 	@Provides
@@ -231,6 +238,7 @@ public class NpcAggroAreaPlugin extends Plugin
 		BufferedImage image = itemManager.getImage(ItemID.ENSOULED_DEMON_HEAD);
 		currentTimer = new AggressionTimer(duration, image, this, active && config.showTimer());
 		infoBoxManager.addInfoBox(currentTimer);
+		notifyOnce = true;
 	}
 
 	private void resetTimer()
@@ -317,6 +325,13 @@ public class NpcAggroAreaPlugin extends Plugin
 	public void onGameTick(GameTick event)
 	{
 		WorldPoint newLocation = client.getLocalPlayer().getWorldLocation();
+
+		if (currentTimer != null && currentTimer.cull() && notifyOnce)
+		{
+			notifier.notify("Aggro has expired");
+			notifyOnce = false;
+		}
+
 		if (lastPlayerLocation != null)
 		{
 			if (safeCenters[1] == null && newLocation.distanceTo2D(lastPlayerLocation) > SAFE_AREA_RADIUS * 4)
