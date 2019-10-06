@@ -328,7 +328,8 @@ public class NpcAggroAreaPlugin extends Plugin
 
 		if (currentTimer != null && currentTimer.cull() && notifyOnce)
 		{
-			notifier.notify("Aggro has expired");
+			if (config.notifyExpire())
+				notifier.notify("Aggro has expired");
 			notifyOnce = false;
 		}
 
