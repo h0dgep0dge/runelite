@@ -326,7 +326,7 @@ public class NpcAggroAreaPlugin extends Plugin
 	{
 		WorldPoint newLocation = client.getLocalPlayer().getWorldLocation();
 
-		if (currentTimer != null && currentTimer.cull() && notifyOnce)
+		if (active && currentTimer != null && currentTimer.cull() && notifyOnce)
 		{
 			if (config.notifyExpire())
 				notifier.notify("Aggro has expired");
