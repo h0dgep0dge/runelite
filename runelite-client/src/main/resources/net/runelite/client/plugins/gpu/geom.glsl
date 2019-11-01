@@ -28,6 +28,8 @@
 #define PI 3.1415926535897932384626433832795f
 #define UNIT PI / 1024.0f
 
+#define LOCKED_REGIONS_SIZE 12
+
 layout(triangles) in;
 layout(triangle_strip, max_vertices = 3) out;
 
@@ -44,19 +46,45 @@ layout(std140) uniform uniforms {
 };
 
 uniform mat4 projectionMatrix;
+uniform int useGray;
+uniform int useHardBorder;
+uniform int baseX;
+uniform int baseY;
+uniform int lockedRegions[LOCKED_REGIONS_SIZE];
 
 in ivec3 vPosition[];
 in vec4 vColor[];
 in float vHsl[];
 in vec4 vUv[];
 in float vFogAmount[];
+in float vGrayAmount[];
 
 out vec4 Color;
 centroid out float fHsl;
 out vec4 fUv;
 out float fogAmount;
+out float grayAmount;
 
 #include to_screen.glsl
+
+int toRegionId(int x, int y) {
+  return (x >> 13 << 8) + (y >> 13);
+}
+
+float b_convert(float n) {
+  return clamp(abs(n), 0.0, 1.0);
+}
+
+float isLocked(int x, int y) {
+  x = x + baseX;
+  y = y + baseY;
+  float result = 1.0;
+  for (int i = 0; i < LOCKED_REGIONS_SIZE; ++i) {
+    int region = toRegionId(x, y);
+    result = result * (lockedRegions[i] - region);
+  }
+  return b_convert(result);
+}
 
 void main() {
   ivec3 cameraPos = ivec3(cameraX, cameraY, cameraZ);
@@ -69,11 +97,16 @@ void main() {
     return;
   }
 
+
+  ivec3 center = (vPosition[0] + vPosition[1] + vPosition[2])/3;
+  float locked = useGray * isLocked(center.x, center.z);
+
   vec4 tmp = vec4(screenA.xyz, 1.0);
   Color = vColor[0];
   fHsl = vHsl[0];
   fUv = vUv[0];
   fogAmount = vFogAmount[0];
+  grayAmount = useHardBorder * locked + (1 - useHardBorder) * vGrayAmount[0];
   gl_Position  = projectionMatrix * tmp;
   EmitVertex();
 
@@ -82,6 +115,7 @@ void main() {
   fHsl = vHsl[1];
   fUv = vUv[1];
   fogAmount = vFogAmount[1];
+  grayAmount =  useHardBorder * locked + (1 - useHardBorder) * vGrayAmount[1];
   gl_Position  = projectionMatrix * tmp;
   EmitVertex();
 
@@ -90,6 +124,7 @@ void main() {
   fHsl = vHsl[2];
   fUv = vUv[2];
   fogAmount = vFogAmount[2];
+  grayAmount =  useHardBorder * locked + (1 - useHardBorder) * vGrayAmount[2];
   gl_Position  = projectionMatrix * tmp;
   EmitVertex();
 
